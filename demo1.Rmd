@@ -1,0 +1,389 @@
+
+
+```{r, include = FALSE}
+# do not remove
+package_exists <- require(knitr)
+if(package_exists) opts_chunk$set(collapse = TRUE)
+```
+
+This demo is broken into three parts: the first part reviews the formulas
+you've learned for unbiased estimators of the population mean and variance by
+putting them into practice with Question 35 of Chapter 7. 
+
+The second part introduces simulation studies by simulating the sampling 
+distribution of the mean. At that section's conclusion, we will reproduce 
+Figure 7.2 from the book, which shows simulated histograms for the sampling 
+distribution of the mean with a few different sample sizes. 
+We'll review the properties of sampling distributions briefly. 
+
+Finally, we'll put this all together with Question 65 from Chapter 7. This
+question asks us to compute unbiased estimates of the mean and variance, as 
+well as simulate a sampling distribution for the mean. As a result, this
+question ties the concepts from the first two parts together. In this section,
+there is little explanatory text: mostly the solution code is presented, so
+it can serve as a review for you. 
+
+### Estimating population mean and variance: Question 35
+A simple random sample of a population of size 2000 yields the following
+25 values:
+```{r}
+x <- c(104, 86, 91, 104, 79, 
+  109, 80, 103, 98, 87,
+  111, 119, 99, 98, 94,
+  109, 88, 108, 83, 92,
+  87, 122, 96, 107, 97)
+
+n <- length(x)  # sample size
+N <- 2000       # population size
+```
+
+**Calculate an unbiased estimate of the population mean.**
+```{r}
+x_bar <- mean(x)
+```
+
+**Calculate an unbiased estimate of the population variance and $Var(\bar{X})$.**
+```{r}
+# unbiased estimate of the population variance
+s2 = sum( (x - x_bar)^2 / (n-1) )
+
+# unbiased estimate of variance of sample mean
+# see Section 7.3 Corollary A 
+var_xbar <- s2/n * (1 - n/N)
+```
+
+**Give approximate 95% confidence intervals for the population mean and total.**
+```{r}
+z <- abs(qnorm((1 - 0.95)/2))     # find 2.5th percentile of normal dist
+                                  # took abs value bc normal dist is symmetric
+
+# 95% confidence interval is x_bar +/- z*sqrt(var_xbar)
+x_bar + c(-1, 1)*z*sqrt(var_xbar)
+```
+
+**How could we use the var() function in the computations above?**
+
+We did the computations above manually to demonstrate how to use the equations
+presented in the text. However, R has a built-in function for computing
+variance of a sample as well, ```var()```. Let's look at the help file
+to examine what it does. 
+
+```{r}
+?var
+```
+
+If we look at the 5th paragraph in the *Details* section, we will see:
+
+> The denominator n - 1 is used which gives an unbiased estimator 
+> of the (co)variance for i.i.d. observations. These functions 
+> return NA when there is only one observation (whereas S-PLUS 
+> has been returning NaN), and fail if x has > length zero.
+
+This tells us that the ```var()``` function is using n-1 as a denominator 
+when computing variance, rather than n. We can check this ourselves.
+Let's go back to the estimate of variance we computed previously, ```s2```.
+We used the denominator ```n-1```. If the ```var()``` function is doing what
+it's saying it's doing, then the value of ```s2``` should match up with
+```var(x)```.
+
+```{r}
+# print s2 again, for reference
+s2
+
+# compute using R's var function:
+var(x)
+```
+
+## Introduction to simulation
+### Simulating the sampling distribution of the mean
+Herksen (1976) published data on the number of patients discharged from 393
+short-stay hospitals during January 1968. 
+
+Suppose we want to find the sampling distribution of the mean for a sample of
+size 16 from the population of 393 hospitals. 
+
+To find this distribution analytically, we would form all (393 choose 16) 
+samples and compute the mean of each one. But (393 choose 16) evaluates to 
+```r choose(393, 16)```...that's over $10^25$ possible samples, which is
+totally impractical. 
+
+Instead, we can try estimating the sampling distribution through *simulation*. 
+We will draw many samples of size 16, compute the mean, and then form a histogram
+of these means. We won't get all $>10^25$ possible samples, but we'll hopefully
+get a few thousand (or more, depending on what you have time for), and have
+a sense for what the shape of the distribution would look like. 
+
+First, we'll read in the hospital data:
+```{r}
+# read in the hospital data
+hospitals <- read.csv("hospitals.csv", header = TRUE)
+names(hospitals) <- c("discharges", "beds")   # fix the names of the columns
+
+# check that there are 393 hospitals:
+nrow(hospitals)
+```
+
+Let's try taking a single sample from the hospital discharge data. 
+The ```sample()``` function in R can do this for us.
+```{r}
+sample(hospitals$discharges, size = 16, replace = FALSE)
+```
+
+You can see that if you repeat this a few times, you'll get a
+different set of 16 numbers each time. This is like drawing 16 numbers from
+a box with 393 tickets, over and over again. 
+
+R makes it easy for us to take repeated samples with the ```replicate()``` 
+function. This function evaluates an expression a certain number of times,
+and saves the result in a matrix or list format. Below, we are telling
+R to repeat sampling 10 times. Observe the result:
+
+```{r}
+sim_samples_16 <- replicate(n = 10, 
+          expr = sample(hospitals$discharges, size = 16, replace = FALSE))
+
+sim_samples_16
+```
+
+You should see that the result is a 16 x 10 matrix, one column for each sample. 
+
+Recall that the original goal was to be able to simulate the sampling distribution
+of the mean for a sample of size 16. So far, we've demonstrated how to draw 
+multiple samples of size 16. What's left is to compute the mean of each sample.
+We can do this easily using the function ```colMeans()``` or ```rowMeans()```,
+which calculate the mean of each column or row, respectively. Here, since
+each column represents a sample, we will use ```colMeans()```.
+
+```{r}
+colMeans(sim_samples_16)
+```
+
+Great! We've found the means for 10 samples of size 16.
+
+We've done essentially what we need to do to simulate the sampling distribution
+of the mean. However, simulations usually require much more replication for the
+histogram to begin to take shape (think: a histogram with 10 values is a lot
+less precise or refined than a histogram with 500 values). 
+
+Per Example A in Section in 7.3.1, we will take 500 samples 
+(this number is chosen arbitrarily---the bigger the better), 
+compute the mean for each of the 500 samples, and plot a histogram. This next
+code chunk consolidates the work from the previous chunks.
+
+Note that we are overwriting the variable ```sim_samples_16.```
+
+```{r}
+# produce 500 samples of size 16 from the hospitals discharge data
+sim_samples_16 <- replicate(n = 500, 
+                    sample(hospitals$discharges, size = 16,
+                           replace = FALSE))
+
+# compute the mean of each sample
+sim_means_16 <- colMeans(sim_samples_16)
+
+
+# produce a histogram
+hist(sim_means_16, 
+     xlab = "Sample Mean",
+     ylab = "Counts",
+     main = "Histogram of Sample Means, n = 16", 
+     xlim = c(200, 1800),
+     breaks = seq(200, 1800, 100),    # set bin endpoints to 200, 300, 400,...
+     axes = FALSE)
+
+# create custom x-axis, to match the example in the text:
+axis(2) # default y-axis
+axis(1, at = seq(200, 1800, 200)) # set axis tick marks at 200, 400, 600,...
+```
+
+### Reproducing Figure 7.2 (more advanced R coding)
+Figure 7.2 from the book is displayed below. As you can see, it shows simulated 
+histograms for four different sample sizes: n = 8, 16, 32, and 64. 
+We've just created a histogram for n = 16. Creating a histogram for the other
+sample sizes is no different; all of the computations are the same.
+
+One addition is that you've learned from class that $\bar{X}$ is an unbiased
+estimate for the true mean. The true mean, here, is the mean of all 393
+hospital discharge values, ```r mean(hospitals$discharges)```. We'll add a
+reference line for this population mean, so you can see how the sample means
+are distributed relative to the "true" value. 
+
+!["Figure 7.2"](Figure7pt2.png)
+
+We can simply produce the other three histograms by writing an R function that
+performs all of the computations above, but allows us to input the sample size
+we'd like for it to use.
+
+Note: Writing an R function is an advanced technique which you aren't expected 
+to know how to do, but if you've had some exposure to programming (e.g., you've 
+taken Stat 133 or some CS classes), this will be familiar to you.
+
+You could just have easily copied and pasted the previous code chunk 
+four separate times, switching out the sample size for what you want, 
+but that's bad practice: if you can write a function so you aren't 
+copying and pasting commands repeatedly, you should do it.
+However, writing R functions is beyond the scope of the course. If you're
+new to R, just look at this section of the demo as something cool to look
+forward to learning if you decide to take your skills further!
+
+```{r}
+# define function to produce 500 samples of size n, compute the mean, 
+# and plot the histogram using bin width bin_width
+```{r, include = FALSE}
+SimulateSamplingDist <- function(n, bin_width){
+  # produce 500 samples of size 16 from the hospitals discharge data
+  sim_samples_16 <- replicate(n = 500, 
+                              sample(hospitals$discharges, size = n,
+                                     replace = FALSE))
+  
+  # compute the mean of each sample
+  sim_means_16 <- colMeans(sim_samples_16)
+  
+  
+  # produce a histogram
+  hist(sim_means_16, 
+       xlab = "Sample Mean",
+       ylab = "Counts",
+       main = paste("Histogram of Sample Means, n =", n),
+       xlim = c(200, 1800),
+       breaks = seq(200, 1800, bin_width),    # set bin endpoints
+       axes = FALSE)
+  
+  # create custom x-axis, to match the example in the text:
+  axis(2)
+  axis(1, at = seq(200, 1800, 200))
+  
+  abline(v = mean(hospitals$discharges), col = "red")
+  }  
+```
+
+Now we'll reproduce Figure 7.2 from Example A in Section 7.3.1.
+```{r, fig.height=12, fig.width=4}
+par(mfrow=c(4, 1)) # figure is drawn as a 4 x 1 array 
+
+SimulateSamplingDist(n = 8, bin_width = 100)
+SimulateSamplingDist(n = 16, bin_width = 100)
+SimulateSamplingDist(n = 32, bin_width = 50)
+SimulateSamplingDist(n = 64, bin_width = 50)
+```
+
+There are three features of this set of plots that are noteworthy. 
+
+1. *All of the histograms are centered about the population mean.* Recall the 
+result from the book, which states that $\bar{X}$ is approximately normally 
+distributed with mean $\mu$ and variance $\sigma^2/n$. 
+
+2. *As the sample size increases, the histograms become less spread out.* 
+This makes sense, because $Var(\bar{X}) = \sigma^2/n$, so it is inversely
+proportional to $n$. 
+
+3. The histogram of the 393 hospital discharges is show below. This represents
+a histogram of the "population." Note that *the histogram of the population 
+is neither normally distributed, nor symmetric around its mean.* 
+But the sampling distributions are! It is not necessary for the population to
+be normally distributed or symmetric about the mean in order for the sampling
+distributions to be.
+
+```{r}
+hist(hospitals$discharges, 
+     main = "Histogram of hospital discharges",
+     xlab = "Hospital discharges",
+     ylab = "Count")
+
+# add reference line for population mean
+abline(v = mean(hospitals$discharges), col = "red")
+```
+
+
+## Putting it all together: Question 65
+All of the work we've done above gave us the tools to do parts a through e of
+Question 65. This is a review of the previous two sections (Question 35 and
+simulation); as a result, I've put less comments and explanatory text for the
+solutions below. 
+
+The disk file ```cancer``` contains values for breast cancer mortality from
+1950 to 1960 (y) and the adult white female population in 1960 (x) for 301 
+counties in North Carolina, South Carolina, and Georgia. 
+
+**Make a histogram of the population values for cancer mortality.**
+```{r}
+# read in the data
+cancer <- read.csv("cancer.csv", header = FALSE)
+# first column contains mortality from breast cancer, 
+# second column contains the total female population in the county
+names(cancer) <- c("mort", "fem_pop")
+
+# check there are 301 counties
+N <- nrow(cancer)
+N
+
+# produce a histogram
+hist(cancer$mort,
+     main = "Breast Cancer Mortality",
+     xlab = "Mortality")
+```
+
+**What are the population mean and total cancer mortality? What are the 
+population variance and standard deviation?**
+```{r}
+# calculate population mean
+mu <- mean(cancer$mort)
+mu
+
+# total cancer mortality:
+N*mu
+
+# population variance and standard deviation
+sigma2 <- var(cancer$mort)*(N-1)/N 
+sigma2
+
+sigma <- sqrt(sigma2)
+sigma
+```
+
+**Simulate the sampling distribution of the mean of a sample of 25 observations 
+of cancer mortality.**
+```{r}
+# we'll simulate 1000 samples of size 25 from the mortality data
+sim_cancer_samples <- replicate(n = 1000,
+                          sample(cancer$mort, size = 25))
+
+# compute means
+sim_cancer_means <- colMeans(sim_cancer_samples)
+
+# plot histogram
+hist(sim_cancer_means,
+     main = "Histogram of sample means",
+     ylab = "Count",
+     xlab = "Sample means")
+abline(v = mu, col = "red") # Add reference line for population mean
+```
+
+
+**Draw a simple random sample of size 25 and use it to estimate the mean and 
+total cancer mortality.**
+```{r}
+sample_cancer <- sample(cancer$mort, size = 25)
+
+# estimate of population mean
+mean(sample_cancer)
+
+# estimate of total cancer mortality
+mean(sample_cancer)*N
+```
+
+
+**Estimate the population variance and standard deviation from the sample 
+of part (d).**
+```{r}
+# estimate of the population variance
+var(sample_cancer)
+
+# estimate of the population standard deviation
+sd(sample_cancer) 
+
+# or equivalently: 
+sqrt(var(sample_cancer))
+```
+
+

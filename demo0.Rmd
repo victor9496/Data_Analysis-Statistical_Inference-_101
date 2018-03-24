@@ -1,0 +1,286 @@
+
+
+# Before you begin:
+Some useful notes before you read the rest of this demo:
+
+* This was demo was created using R Markdown. R Markdown files have the 
+file extension .Rmd. This format is useful because it allows users to write
+text (like this) interleaved with R code. When I "knit" this document, 
+all of the R code I've written in the .Rmd file is run and the output is 
+written to a .HTML file, along with this surrounding text. What this means
+for you: 
+
+    + You may find it easier to read the HTML file, rather than the .Rmd. It's
+    like the difference between reading a webpage and it's source code. 
+    
+    + If you're interested in the .Rmd because you want to copy and paste some
+    code I used, let me explain how this document is formatted. All of the 
+    code is written in "chunks": chunks always begin with three "`" marks
+    followd by "{r}", and end with three "`" marks. 
+    Everything outside of a chunk is just regular text.
+
+* In R, you can add "comments" to your code using the pound (#) sign. You will
+see that I have added many comments to my code below to make it easier for you
+to understand what is going on. You do not need to be so thorough in your own
+code, but it is generally good practice to add comments explaining the 
+purpose of the code you are writing. 
+
+* Before you begin doing work in R, I would recommend downloading your data to 
+a folder you've created for the first assignment. Set that to be your working
+directory. Whenever we want to load data into R, the file paths we provide are
+relative to this working directory. Setting your working directory to be the
+same as the location as the data means your file path simplifies to the 
+filename. 
+
+* At the end of your R session, you will be prompted about whether you want to
+save your workspace.
+     + *What this means*: R will save your current work environment
+(all of the variables you've created) to a special file format called "RData."
+The file is hidden from view: it exists as ".RData" in the working directory,
+for those who want to look for it. The next time you open up RStudio and set
+your working directory to the same folder, it will load this file and all of 
+the variables you created will be there.
+     + *I do NOT recommend saving your workspace,* as I think that this 
+  ".RData" file just takes up space---oftentimes, a LOT of space---on your
+  computer. Also, you might initially think saving your data is a good thing,
+  but it's not the results that are meant to be saved---it's the code. You
+  should be writing code that is *reproducible*. That means that if I run your
+  code, starting from reading in the data, I should be able to produce
+  the same (or similar, if doing random simulation) results. 
+
+* You will see me use ```c()```, like ```c("black", "red")```. The ```c()```
+function just creates a vector with the arguments I give it--the "c" is short
+for "concatenate". 
+
+* Quotation marks in R create character strings: as an example from the demo 
+below, you can think of ```"iridium"``` as representing the *word* iridium, 
+not the variable ```iridium``` (which is actually a long vector of numbers). 
+
+* When turning in homework, add meaningful labels to your plots. 
+I'll show you how to do that below.
+
+
+# Demo using data from experiments on sublimation temperatures
+
+## Calculating descriptive statistics
+
+Today we'll be working with a set of experiments done to measure the heat of
+sublimation for the elements iridium and rhodium. Sublimation is the process of
+an element passing from solid state to gaseous state directly, i.e. without
+becoming liquid first. 
+
+This data is available as part of a supplement to your textbook. This 
+corresponds to Chapter 10 exercise 26. 
+
+### Loading the data
+
+The ```scan()``` function is for reading a list of values into R; in other words,
+just a single variable, not multicolumn data like an Excel spreadsheet or table. 
+```{r}
+# read in data
+iridium <- scan("iridium.csv")
+rhodium <- scan("rhodium.csv")
+```
+
+### Calculating summary statistics
+R has many built-in functions to make it easy for you to find out basic 
+information about your data. For example, we can compute the mean, median, and
+standard deviation of our data:
+```{r, collapse=TRUE}
+median(iridium)
+
+mean(iridium)
+
+sd(iridium)
+```
+
+We can also compute quantiles using the ```quantile()``` function. Recall that
+the interquartile range is defined to be the 75th percentile - 25th percentile.
+```{r, collapse=TRUE}
+# Manually compute the IQR
+quantile(iridium, 0.75) - quantile(iridium, 0.25)
+
+# Compute using R's IQR function---same result
+IQR(iridium)
+```
+
+The ```summary()``` function prints a five-number summary of your data, which
+does much of what we just did in one step. 
+```{r}
+summary(iridium)
+```
+ 
+ 
+ 
+ 
+## Exploratory plots
+### Histograms
+*Histograms* show you the distribution of your data. To produce a histogram in R,
+apply the ```hist()``` function to a single numeric vector. You may find the
+```breaks``` argument helpful: this sets the number of bins in the histogram.
+The more bins, the more detailed your histogram will be. For example, this is the
+histogram I get when I let R choose the number of bins for me:
+```{r}
+hist(iridium,
+     xlab = "Temp (C)",     # adjust x-axis label
+     main = "Sublimation temperature of Iridium")     # adjust main title
+```
+
+And this is the histogram produced when I try to force R to use a lot of bins. 
+There are only so many distinct data points, so you see it doesn't actually use
+40 bins, but still more than what it had before.
+```{r}
+hist(iridium, breaks = 40,
+     xlab = "Temp (C)",     # adjust x-axis label
+     main = "Sublimation temperature of Iridium")     # adjust main title
+```
+
+### Boxplots
+*Boxplots* are useful for comparing the distributions of two groups. 
+The center line is for the median of the data. The box spans the 1st quantile
+to the 3rd quantile, so the box represents 50% of the data. The whiskers
+extend from 1st quantile - 1.5(IQR) to 3rd quantile + 1.5(IQR). Beyond the
+whiskers, points are considered outliers, and directly plotted. 
+
+Remember to use the ```names``` and ```ylab``` arguments to add meaningful
+labels to your plot. You can also add an x-axis labels with the argument
+```xlab``` and a main title with the argument ```main```. See the scatterplot
+in the next section for an example. 
+```{r}
+boxplot(iridium, rhodium, 
+        names = c("iridium", "rhodium"),
+        ylab = "Sublimation temperature (Celsius)")
+```
+
+### Scatterplot
+Here, we produce a *scatterplot* of the sublimation temperatures with respect
+to the order they appear in the data. Because the data is already sorted
+in the order that the experiments were done, this allows us to look at whether
+there's an experiment effect on the sublimation results. 
+```{r}
+ylims <- range(iridium, rhodium) # find the range of the data
+
+plot(iridium, ylim = ylims, 
+     type = "l", # specifies the type of plot as a line (l for line) 
+     main = "Sublimation temperature of different elements", # main title
+     xlab = "Experiment number", # x-axis label
+     ylab = "Temp (C)") # y-axis label
+
+# add a red line for the rhodium data
+lines(rhodium, col = "red") 
+
+# add a legend
+legend("topright", 
+       lwd = 1,       # the data are plotted as lines with thickness (lwd) 1,
+       col = c("black", "red"),
+       legend = c("iridium", "rhodium"),
+       bty = "n")     # get rid of the default black border around the legend
+                      # just because I think it looks ugly
+
+
+```
+
+### Quantile-quantile plot
+A quantile-quantile plot graphs the quantiles of one distribution against
+another. Typically, we are interested in graphing the quantiles of our data
+against a theoretical distribution, to understand how closely the data follow
+the theoretical distribution. 
+
+This works especially well for distributions in the location-scale family 
+(This refers to distributions where, under shifting and scaling (i.e. linear 
+transformations), you still have a distribution in that same family. 
+For example, if you shift and scale a normal distribution, you still have a 
+normal distribution.) because checking whether your data follows, say, a normal
+distribution reduces to seeing whether the QQ plot results in a straight line.
+Another distribution in this family is the uniform. 
+
+In the plots below, we simulate data from a normal distribution and create
+a QQ-plot comparing the data against a normal distribution with mean 0, sd 1
+(that's the default in R). Notice that the points fall on a straight line,
+just not the y=x line. In particular, they fall on the y = x + 2 line, 
+because the quantiles for the simulated data are roughly 2 units bigger 
+than the quantiles for the standard normal.
+
+```{r}
+## Normal with a higher mean than the theoretical distribution:
+# generate normal variables
+normal_vars <- rnorm(100, mean = 2, sd = 1)
+
+# plot a histogram:
+hist(normal_vars, breaks = 10,
+     main = "Histogram of simulated N(2,1) data",
+     xlab = "Simulated N(2,1) data")
+
+# create a qq-plot
+qqnorm(normal_vars)
+abline(a = 0, b = 1) # add y = x ref line
+abline(a = 2, b = 1, col = "red") # add the y = x + 2 line in red
+
+# add a legend:
+legend("topleft",
+       col = c("black", "red"),
+       lwd = 1,
+       legend = c("y = x", "y = x +2"))
+```
+
+
+Here's another example with data simulated from a beta distribution, and then
+scaled to fall outside the interval (0, 1). This code produces generates the
+data and then plots a histogram, superimposing the normal density on top. 
+Notice that, relative to the normal density it is being compared to, the
+simulated data has much greater density in the lower range. It has a long right
+tail. 
+```{r}
+## A distribution with a long right tail:
+# generate random variables
+set.seed(1234)
+beta_vars <- rbeta(100, 2, 15)*5 - 1.5
+# add some more data in the tails
+beta_vars <- c(beta_vars, 1, 1.5, 1.5, 1.75, 2, 2.5, 3) 
+
+# plot histogram:
+hist(beta_vars, breaks = 15, 
+     freq = FALSE,     # plot density instead of counts in the bins
+     xlim = c(-2, 2),  # set x-axis range
+     main = "Histogram of simulated right skew data",
+     xlab = "Simulated data")
+curve(dnorm, add = TRUE) # add normal density for reference
+```
+
+This is reflected in the QQ plot: to look at this pointwise, we can see from
+the histogram that the simulated data attains its 50th percentile at a 
+much smaller value than the standard normal. Thus, when the 50th percentile of
+the data is plotted against the 50th percentile of the normal, it will fall
+below the y = x line. This is true for most of the percentiles being plotted:
+the percentiles of the data are generally smaller than those for the standard
+normal distribution. 
+```{r}
+# qq-plot:
+qqnorm(beta_vars, ylim = c(-2, 2))
+abline(a = 0, b = 1) # add y=x ref line
+```
+
+
+
+# Homework help
+Here's how to read in your data for your first homework problem, and format
+it so you have two vectors (one with birthweights for smokers, and the other
+with birthweights for non-smokers). 
+```{r}
+# instead of "babiesI.data", make sure you put the correct file path
+# for babiesI.data on your computer. 
+babies <- read.table("babiesI.data", header=TRUE)
+
+# create a vector called bwt.smokers with birthweights
+# of babies born to mothers who smoke
+bwt.smokers <- babies$bwt[babies$smoke == 1] 
+
+# create a vector called bwt.nonsmokers with birthweights 
+# of babies born to mothers who don't smoke
+bwt.nonsmokers <- babies$bwt[babies$smoke == 0]
+```
+
+From here on out, try applying ```summary()``` or ```hist()``` to the 
+vectors ```bwt.smokers``` and ```bwt.nonsmokers```. You can even try
+making a ```boxplot()```, comparing these two groups--refer to my 
+iridium/rhodium boxplot from earlier.
